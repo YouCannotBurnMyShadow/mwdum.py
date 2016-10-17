@@ -24,6 +24,67 @@ wiki_namespaces = ["Talk",
     "TimedText","TimedText_talk",
     "Module","Module_talk"]
 
+TABLE_STRUCTURE = '''
+DROP TABLE IF EXISTS `page`;
+CREATE TABLE `page` (
+  `page_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `page_namespace` int(11) NOT NULL,
+  `page_title` varbinary(255) NOT NULL,
+  `page_restrictions` tinyblob NOT NULL,
+  `page_is_redirect` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `page_is_new` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `page_random` double unsigned NOT NULL,
+  `page_touched` binary(14) NOT NULL DEFAULT '\0\0\0\0\0\0\0\0\0\0\0\0\0\0',
+  `page_links_updated` varbinary(14) DEFAULT NULL,
+  `page_latest` int(10) unsigned NOT NULL,
+  `page_len` int(10) unsigned NOT NULL,
+  `page_content_model` varbinary(32) DEFAULT NULL,
+  `page_lang` varbinary(35) DEFAULT NULL,
+  PRIMARY KEY (`page_id`),
+  UNIQUE KEY `name_title` (`page_namespace`,`page_title`),
+  KEY `page_random` (`page_random`),
+  KEY `page_len` (`page_len`),
+  KEY `page_redirect_namespace_len` (`page_is_redirect`,`page_namespace`,`page_len`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=binary;
+
+DROP TABLE IF EXISTS `revision`;
+CREATE TABLE `revision` (
+  `rev_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `rev_page` int(10) unsigned NOT NULL,
+  `rev_text_id` int(10) unsigned NOT NULL,
+  `rev_comment` varbinary(767) NOT NULL,
+  `rev_user` int(10) unsigned NOT NULL DEFAULT '0',
+  `rev_user_text` varbinary(255) NOT NULL DEFAULT '',
+  `rev_timestamp` binary(14) NOT NULL DEFAULT '\0\0\0\0\0\0\0\0\0\0\0\0\0\0',
+  `rev_minor_edit` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `rev_deleted` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `rev_len` int(10) unsigned DEFAULT NULL,
+  `rev_parent_id` int(10) unsigned DEFAULT NULL,
+  `rev_sha1` varbinary(32) NOT NULL DEFAULT '',
+  `rev_content_model` varbinary(32) DEFAULT NULL,
+  `rev_content_format` varbinary(64) DEFAULT NULL,
+  PRIMARY KEY (`rev_id`),
+  UNIQUE KEY `rev_page_id` (`rev_page`,`rev_id`),
+  KEY `rev_timestamp` (`rev_timestamp`),
+  KEY `page_timestamp` (`rev_page`,`rev_timestamp`),
+  KEY `user_timestamp` (`rev_user`,`rev_timestamp`),
+  KEY `usertext_timestamp` (`rev_user_text`,`rev_timestamp`),
+  KEY `page_user_timestamp` (`rev_page`,`rev_user`,`rev_timestamp`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=binary MAX_ROWS=10000000 AVG_ROW_LENGTH=1024;
+SELECT * FROM bitnami_mediawiki.text;
+
+DROP TABLE IF EXISTS `text`;
+CREATE TABLE `text` (
+  `old_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `old_text` mediumblob NOT NULL,
+  `old_flags` tinyblob NOT NULL,
+  PRIMARY KEY (`old_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=binary MAX_ROWS=10000000 AVG_ROW_LENGTH=10240;
+
+
+'''
+
+
 def escapeSQL(string):
     newstr = string.replace('\\','\\\\')\
             .replace('"','\\"')\
@@ -217,6 +278,7 @@ class MySQL_Output:
                 )
 
     def end(self):
+        uprint(TABLE_STRUCTURE)
         self.page.finish()
         self.text.finish()
         self.rev.finish()
